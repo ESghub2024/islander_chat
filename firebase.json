@@ -1,0 +1,33 @@
+{
+  "emulators": {
+    "dataconnect": {
+      "dataDir": "dataconnect/.dataconnect/pgliteData"
+    }
+  },
+  "dataconnect": {
+    "source": "dataconnect"
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "islanderchat",
+          "appId": "1:57548327918:android:bb8bfcf1f6599072301cff",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "islanderchat",
+          "configurations": {
+            "android": "1:57548327918:android:bb8bfcf1f6599072301cff",
+            "ios": "1:57548327918:ios:1cba842e27f59a13301cff",
+            "macos": "1:57548327918:ios:1cba842e27f59a13301cff",
+            "web": "1:57548327918:web:e95e6c5144b33a7a301cff",
+            "windows": "1:57548327918:web:61c085795dc533e9301cff"
+          }
+        }
+      }
+    }
+  }
+}
