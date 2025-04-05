@@ -1,6 +1,10 @@
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:islander_chat/components/chat_bubble.dart';
 import 'package:islander_chat/components/my_text_field.dart';
 import 'package:islander_chat/services/chat/chat_service.dart';
@@ -27,7 +31,10 @@ class _ChatPageState extends State<ChatPage> {
   void sendMessage() async {
     if(_messageController.text.isNotEmpty){
       await _chatService.sendMessage(
-        widget.receiverUserID, _messageController.text);
+        widget.receiverUserID, 
+        _messageController.text,
+        isImage: false,
+        );
       
       //Clear the text controller after message is sent
       _messageController.clear();
@@ -47,9 +54,10 @@ class _ChatPageState extends State<ChatPage> {
 
         //User inputs
         _buildMessageInput(),
+        _buildPostImageButton(),
         ],
         ),
-      );
+      );   
   }
 
   //Build message list
@@ -78,22 +86,15 @@ class _ChatPageState extends State<ChatPage> {
   //Build message item
   Widget _buildMessageItem(DocumentSnapshot document) {
     Map<String, dynamic>data = document.data() as Map<String, dynamic>;
-  
-    //Align message to the right for the sender
-    var alignment = (data['senderId'] == _firebaseAuth.currentUser!.uid) 
-    ? Alignment.centerRight
-    : Alignment.centerLeft;
-
     return Container(
-      alignment: alignment,
       child: Column(
         crossAxisAlignment: (data['senderId'] == _firebaseAuth.currentUser!.uid) 
-        ? CrossAxisAlignment.end
-        : CrossAxisAlignment.start,
+        ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
-          Text(data['senderEmail']),
+          _buildProfilePicture(data['senderEmail']),
           const SizedBox(height: 5),
           ChatBubble(message: data['message']),
+          const SizedBox(height: 5),
         ],
         ),
       );
@@ -123,4 +124,45 @@ class _ChatPageState extends State<ChatPage> {
       ],
       );
   }
+
+//Build image post button
+Widget _buildPostImageButton() {
+  return IconButton(
+    onPressed: _pickImage, 
+    icon: const Icon(Icons.image),
+    );
 }
+
+//pick image from gallery
+void _pickImage() async {
+  final ImagePicker _picker = ImagePicker();
+  final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+
+  if(image != null){
+    //Upload image to Firebase Storage
+    String imageUrl = await _chatService.uploadImage(image.path);
+    
+    //Send image message
+    await _chatService.sendMessage(
+      widget.receiverUserID, 
+      imageUrl,
+      isImage: true,
+      );
+  }
+  
+  
+}
+
+//Build profile picture
+Widget _buildProfilePicture(String email) {
+  return Align(
+    alignment: Alignment.centerLeft,
+    child: CircleAvatar(
+      backgroundColor: Colors.lightGreen,
+      child: Text(email[0]),
+      radius: 20,
+      ),
+    );
+  }
+}
+

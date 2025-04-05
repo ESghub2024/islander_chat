@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:islander_chat/pages/chat_page.dart';
 import 'package:provider/provider.dart';
+import 'package:islander_chat/pages/user_profile_page.dart';
 
 import '../services/authentication/auth_service.dart';
 
@@ -69,6 +70,7 @@ class _HomePageState extends State<HomePage> {
     //Display all users except current users
     if(_auth.currentUser!.email != data['email']){
       return ListTile(
+        leading: _buildProfilePicture(data['email']),
         title: Text(data['email']),
         onTap:() {
           //Pass the clicked user's UID to the chat page
@@ -85,4 +87,13 @@ class _HomePageState extends State<HomePage> {
       return Container();
     }
   }
+
+//Build profile picture widget
+Widget _buildProfilePicture(String email) {
+  return CircleAvatar(
+    backgroundColor: Colors.lightGreen,
+    child: Text(email[0]),
+  );
+
+}
 }
