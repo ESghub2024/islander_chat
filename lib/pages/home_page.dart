@@ -3,7 +3,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:islander_chat/pages/chat_page.dart';
 import 'package:provider/provider.dart';
-import 'package:islander_chat/pages/user_profile_page.dart';
 
 import '../services/authentication/auth_service.dart';
 
@@ -32,12 +31,10 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         title: Text('Home Page'),
         actions: [
-        IconButton(onPressed: signOut, 
-        icon: const Icon(Icons.logout),
-        )
+          IconButton(onPressed: signOut, icon: const Icon(Icons.logout)),
         ],
-        ),
-        body: _buildUserList(),
+      ),
+      body: _buildUserList(),
     );
   }
 
@@ -46,18 +43,19 @@ class _HomePageState extends State<HomePage> {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance.collection('users').snapshots(),
       builder: (context, snapshot) {
-        if(snapshot.hasError){
+        if (snapshot.hasError) {
           return const Text('error');
         }
 
-        if(snapshot.connectionState == ConnectionState.waiting){
+        if (snapshot.connectionState == ConnectionState.waiting) {
           return const Text('loading..');
         }
 
         return ListView(
-          children: snapshot.data!.docs
-          .map<Widget>((doc) => _buildUserListItem(doc))
-          .toList(),
+          children:
+              snapshot.data!.docs
+                  .map<Widget>((doc) => _buildUserListItem(doc))
+                  .toList(),
         );
       },
     );
@@ -68,32 +66,34 @@ class _HomePageState extends State<HomePage> {
     Map<String, dynamic> data = document.data()! as Map<String, dynamic>;
 
     //Display all users except current users
-    if(_auth.currentUser!.email != data['email']){
+    if (_auth.currentUser!.email != data['email']) {
       return ListTile(
         leading: _buildProfilePicture(data['email']),
         title: Text(data['email']),
-        onTap:() {
+        onTap: () {
           //Pass the clicked user's UID to the chat page
-          Navigator.push(context, MaterialPageRoute(builder: (context) => ChatPage(
-            receiverUserEmail: data['email'],
-            receiverUserID: data['uid'],
-          ),
-          ),
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder:
+                  (context) => ChatPage(
+                    receiverUserEmail: data['email'],
+                    receiverUserID: data['uid'],
+                  ),
+            ),
           );
         },
       );
-    }
-    else{
+    } else {
       return Container();
     }
   }
 
-//Build profile picture widget
-Widget _buildProfilePicture(String email) {
-  return CircleAvatar(
-    backgroundColor: Colors.lightGreen,
-    child: Text(email[0]),
-  );
-
-}
+  //Build profile picture widget
+  Widget _buildProfilePicture(String email) {
+    return CircleAvatar(
+      backgroundColor: Colors.lightGreen,
+      child: Text(email[0]),
+    );
+  }
 }

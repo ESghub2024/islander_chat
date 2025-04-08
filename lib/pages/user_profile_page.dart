@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 class UserProfilePage extends StatefulWidget {
   final String name;
@@ -11,35 +9,23 @@ class UserProfilePage extends StatefulWidget {
     required this.name,
     required this.email,
     required this.profilePicture,
-    });
+  });
 
   @override
   State<UserProfilePage> createState() => _UserProfilePageState();
-  }
-  
-  class _UserProfilePageState extends State<UserProfilePage> {
-  
-    @override
-    Widget build(BuildContext context) {
-      return Scaffold(
+}
+
+class _UserProfilePageState extends State<UserProfilePage> {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
       appBar: AppBar(
         title: const Text('User Profile'),
         backgroundColor: Colors.lightGreen,
-        ),
-        body: Column(
-          children: [
+      ),
+      body: Column(children: [
           ],
-          )
-      );
+          ),
+    );
   }
-
 }
-
-
-
-
-
-
-
-
-
