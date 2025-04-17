@@ -9,6 +9,9 @@ it is programmed using Flutter with Visual Studio Code.
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:islander_chat/firebase_options.dart';
+import 'package:islander_chat/pages/direct_messages.dart';
+import 'package:islander_chat/pages/group_detail_page.dart';
+import 'package:islander_chat/pages/main_page.dart';
 import 'package:islander_chat/services/authentication/auth_gate.dart';
 import 'package:islander_chat/services/authentication/auth_service.dart';
 import 'package:provider/provider.dart';
@@ -30,9 +33,21 @@ class MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      title: 'Flutter Demo',
-      home: AuthGate(),
+    return MaterialApp(
+      title: 'iChat',
+      debugShowCheckedModeBanner: false,
+      home: const AuthGate(),
+      routes: {
+        '/main': (context) => const MainPage(),
+        '/group_detail': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+          return GroupDetailPage(
+            groupId: args['groupId'],
+            groupName: args['groupName'],
+          );
+        },
+        '/inbox': (context) => const DirectMessages(),
+      },
     );
   }
 }

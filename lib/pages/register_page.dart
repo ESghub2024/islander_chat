@@ -21,6 +21,8 @@ class _RegisterPageState extends State<RegisterPage> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   final confirmPasswordController = TextEditingController();
+  final nicknameController = TextEditingController();
+
 
   //Sign up member
   void signUp() async {
@@ -40,6 +42,7 @@ class _RegisterPageState extends State<RegisterPage> {
       await authService.signUpWithEmailandPassword(
         emailController.text, 
         passwordController.text,
+        nicknameController.text.trim(), //pass nickname
         );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()),),);
@@ -62,6 +65,13 @@ class _RegisterPageState extends State<RegisterPage> {
                 style: TextStyle(
                   fontSize: 20, 
                 ),
+              ),
+              const SizedBox(height: 20.0),
+              // Nickname
+              MyTextField(
+                controller: nicknameController,
+                hintText: "Nickname",
+                obscureText: false,
               ),
               const SizedBox(height: 20.0),
           

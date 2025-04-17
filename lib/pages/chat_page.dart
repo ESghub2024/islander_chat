@@ -4,16 +4,17 @@ import 'package:flutter/material.dart';
 import 'package:islander_chat/components/chat_bubble.dart';
 import 'package:islander_chat/components/my_text_field.dart';
 import 'package:islander_chat/services/chat/chat_service.dart';
+import 'package:islander_chat/components/global_app_bar.dart';
 
 class ChatPage extends StatefulWidget {
   final String receiverUserEmail;
   final String receiverUserID;
 
   const ChatPage({
-    super.key, 
-    required this.receiverUserEmail, 
+    super.key,
+    required this.receiverUserEmail,
     required this.receiverUserID,
-    });
+  });
 
   @override
   State<ChatPage> createState() => _ChatPageState();
@@ -24,12 +25,32 @@ class _ChatPageState extends State<ChatPage> {
   final ChatService _chatService = ChatService();
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
 
+  String? receiverNickname;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadReceiverNickname();
+  }
+
+  void _loadReceiverNickname() async {
+    final doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(widget.receiverUserID)
+        .get();
+
+    if (doc.exists) {
+      setState(() {
+        receiverNickname = doc.data()!['nickname'];
+      });
+    }
+  }
+
   void sendMessage() async {
-    if(_messageController.text.isNotEmpty){
+    if (_messageController.text.isNotEmpty) {
       await _chatService.sendMessage(
         widget.receiverUserID, _messageController.text);
-      
-      //Clear the text controller after message is sent
+
       _messageController.clear();
     }
   }
@@ -37,90 +58,90 @@ class _ChatPageState extends State<ChatPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.receiverUserEmail)),
+      appBar: GlobalAppBar(
+        title: receiverNickname ?? widget.receiverUserEmail,
+        showInbox: true,
+      ),
       body: Column(
         children: [
-        //Messages
-        Expanded(
-          child: _buildMessageList(),
-          ),
-
-        //User inputs
-        _buildMessageInput(),
+          Expanded(child: _buildMessageList()),
+          _buildMessageInput(),
         ],
-        ),
-      );
+      ),
+    );
   }
 
-  //Build message list
   Widget _buildMessageList() {
     return StreamBuilder(
       stream: _chatService.getMessages(
         widget.receiverUserID, _firebaseAuth.currentUser!.uid),
       builder: (context, snapshot) {
-        if(snapshot.hasError){
-          return Text('Error${snapshot.error}');
+        if (snapshot.hasError) {
+          return Text('Error: ${snapshot.error}');
         }
-
-        if(snapshot.connectionState == ConnectionState.waiting){
-          return const Text('loading...');
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
         }
-
         return ListView(
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
           children: snapshot.data!.docs
-          .map((document) => _buildMessageItem(document))
-          .toList(),
+              .map((document) => _buildMessageItem(document))
+              .toList(),
         );
       },
-      );
+    );
   }
 
-  //Build message item
   Widget _buildMessageItem(DocumentSnapshot document) {
-    Map<String, dynamic>data = document.data() as Map<String, dynamic>;
-  
-    //Align message to the right for the sender
-    var alignment = (data['senderId'] == _firebaseAuth.currentUser!.uid) 
-    ? Alignment.centerRight
-    : Alignment.centerLeft;
+    Map<String, dynamic> data = document.data() as Map<String, dynamic>;
+    bool isSender = data['senderID'] == _firebaseAuth.currentUser!.uid;
 
-    return Container(
-      alignment: alignment,
-      child: Column(
-        crossAxisAlignment: (data['senderId'] == _firebaseAuth.currentUser!.uid) 
-        ? CrossAxisAlignment.end
-        : CrossAxisAlignment.start,
-        children: [
-          Text(data['senderEmail']),
-          const SizedBox(height: 5),
-          ChatBubble(message: data['message']),
-        ],
-        ),
-      );
-  }
-
-  //Build message input
-  Widget _buildMessageInput() {
-    return Row(
-      children: [
-        //TextField
-        Expanded(
-          child: MyTextField(
-            controller: _messageController,
-            hintText: 'Enter message',
-            obscureText: false,
+    return Align(
+      alignment: isSender ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 6),
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: isSender ? Colors.blueAccent : Colors.grey.shade300,
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(16),
+            topRight: const Radius.circular(16),
+            bottomLeft: Radius.circular(isSender ? 16 : 0),
+            bottomRight: Radius.circular(isSender ? 0 : 16),
           ),
         ),
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.75,
+        ),
+        child: Text(
+          data['message'],
+          style: TextStyle(
+            color: isSender ? Colors.white : Colors.black87,
+            fontSize: 16,
+          ),
+        ),
+      ),
+    );
+  }
 
-        //Send Button
-        IconButton(
-          onPressed: sendMessage, 
-          icon: const Icon(
-            Icons.arrow_upward, 
-            size: 40,
+  Widget _buildMessageInput() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+      child: Row(
+        children: [
+          Expanded(
+            child: MyTextField(
+              controller: _messageController,
+              hintText: 'Enter message',
+              obscureText: false,
             ),
-            ),
-      ],
-      );
+          ),
+          IconButton(
+            onPressed: sendMessage,
+            icon: const Icon(Icons.arrow_upward, size: 30),
+          ),
+        ],
+      ),
+    );
   }
 }
