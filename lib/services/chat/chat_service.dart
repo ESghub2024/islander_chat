@@ -9,7 +9,7 @@ class ChatService extends ChangeNotifier {
   final FirebaseFirestore _fireStore = FirebaseFirestore.instance;
 
   //Send message
-  Future<void> sendMessage(String receiverId, String message) async {
+  Future<void> sendMessage(String receiverId, String message, {required bool isImage}) async {
     //Get current user info
     final String currentUserId = _firebaseAuth.currentUser!.uid;
     final String currentUserEmail = _firebaseAuth.currentUser!.email.toString();
@@ -50,5 +50,12 @@ class ChatService extends ChangeNotifier {
     .orderBy('timestamp' , descending: false)
     .snapshots();
   }
+
+  sendImage(String receiverUserID, String path) {}
+
+  getImageUploadProgress() {}
+
+  uploadImage(String path) {}
+  
 }
 

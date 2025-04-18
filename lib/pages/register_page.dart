@@ -7,10 +7,7 @@ import 'package:provider/provider.dart';
 class RegisterPage extends StatefulWidget {
   final void Function()? onTap;
 
-  const RegisterPage({
-    super.key,
-    required this.onTap,
-    });
+  const RegisterPage({super.key, required this.onTap});
 
   @override
   State<RegisterPage> createState() => _RegisterPageState();
@@ -26,26 +23,26 @@ class _RegisterPageState extends State<RegisterPage> {
 
   //Sign up member
   void signUp() async {
-    if(passwordController.text != confirmPasswordController.text) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Passwords do not match"),
-          ),
-      );
+    if (passwordController.text != confirmPasswordController.text) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Passwords do not match")));
       return;
     }
-    
+
     //Get authentication service
     final authService = Provider.of<AuthService>(context, listen: false);
 
-    try{
+    try {
       await authService.signUpWithEmailandPassword(
-        emailController.text, 
+        emailController.text,
         passwordController.text,
         nicknameController.text.trim(), //pass nickname
         );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()),),);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
     }
   }
 
@@ -62,9 +59,7 @@ class _RegisterPageState extends State<RegisterPage> {
               //Create an Account
               const Text(
                 "Create a New Account.",
-                style: TextStyle(
-                  fontSize: 20, 
-                ),
+                style: TextStyle(fontSize: 20),
               ),
               const SizedBox(height: 20.0),
               // Nickname
@@ -77,53 +72,55 @@ class _RegisterPageState extends State<RegisterPage> {
           
               //Email
               MyTextField(
-                controller: emailController, 
-                hintText: "Student Email", 
+                controller: emailController,
+                hintText: "Student Email",
                 obscureText: false,
-                ),
+              ),
               const SizedBox(height: 20.0),
-          
+
               //Password
               MyTextField(
-                controller: passwordController, 
-                hintText: "Password", 
+                controller: passwordController,
+                hintText: "Password",
                 obscureText: true,
-                ),
+              ),
               const SizedBox(height: 20.0),
 
               //Confirm
               MyTextField(
-                controller: confirmPasswordController, 
-                hintText: "Confirm Password", 
+                controller: confirmPasswordController,
+                hintText: "Confirm Password",
                 obscureText: true,
-                ),
+              ),
               const SizedBox(height: 20.0),
 
               //Sign Up
               MyButtons(onTap: signUp, text: "Sign Up"),
               const SizedBox(height: 20.0),
-          
+
               //Register
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text('Existing Member.'),
+                  const Text('Existing Member?'),
                   const SizedBox(width: 4),
                   GestureDetector(
                     onTap: widget.onTap,
-                    child: const Text('Login',
-                    style: TextStyle(
-                      fontStyle: FontStyle.normal,
-                      backgroundColor: Colors.yellow,
-                    ),
+                    child: const Text(
+                      'Login Here.',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        decoration: TextDecoration.underline,
+                        color: Colors.blue,
+                      ),
                     ),
                   ),
                 ],
-                )
-
-            ],),
+              ),
+            ],
+          ),
         ),
-      )
+      ),
     );
   }
 }

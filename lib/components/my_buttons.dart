@@ -4,11 +4,7 @@ class MyButtons extends StatelessWidget {
   final void Function()? onTap;
   final String text;
 
-  const MyButtons({
-    super.key, 
-    required this.onTap,
-    required this.text,
-    });
+  const MyButtons({super.key, required this.onTap, required this.text});
 
   @override
   Widget build(BuildContext context) {
@@ -24,11 +20,11 @@ class MyButtons extends StatelessWidget {
           child: Text(
             text,
             style: const TextStyle(
-              color: Colors.lime,
+              color: Colors.white,
               fontWeight: FontWeight.bold,
               fontSize: 16,
             ),
-            ),
+          ),
         ),
       ),
     );
