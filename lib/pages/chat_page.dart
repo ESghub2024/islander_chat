@@ -50,14 +50,14 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
-  void sendMessage() async {
-    if (_messageController.text.isNotEmpty) {
-      await _chatService.sendMessage(
-        widget.receiverUserID, _messageController.text);
+  // void sendMessage() async {
+  //   if (_messageController.text.isNotEmpty) {
+  //     await _chatService.sendMessage(
+  //       widget.receiverUserID, _messageController.text);
 
-      _messageController.clear();
-    }
-  }
+  //     _messageController.clear();
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -140,10 +140,10 @@ class _ChatPageState extends State<ChatPage> {
               obscureText: false,
             ),
           ),
-          IconButton(
-            onPressed: sendMessage,
-            icon: const Icon(Icons.arrow_upward, size: 30),
-          ),
+          // IconButton(
+          //   onPressed: sendMessage,
+          //   icon: const Icon(Icons.arrow_upward, size: 30),
+          // ),
         ],
       ),
     );
