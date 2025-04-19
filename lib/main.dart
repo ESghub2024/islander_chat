@@ -15,6 +15,7 @@ import 'package:islander_chat/pages/main_page.dart';
 import 'package:islander_chat/services/authentication/auth_gate.dart';
 import 'package:islander_chat/services/authentication/auth_service.dart';
 import 'package:provider/provider.dart';
+import 'package:islander_chat/pages/chatroom_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -37,18 +38,16 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       home: const AuthGate(),
       routes: {
-        '/main': (context) => const MainPage(),
+         '/main': (context) => const MainPage(),
         '/group_detail': (context) {
           final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
           return GroupDetailPage(
             groupId: args['groupId'],
             groupName: args['groupName'],
           );
-        },
-        '/inbox': (context) => const DirectMessages(),
+      },
+      '/inbox' : (context) => DirectMessages(),
       },
     );
   }
 }
-
-

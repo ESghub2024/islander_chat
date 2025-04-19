@@ -9,7 +9,7 @@ class GroupCard extends StatelessWidget {
     super.key,
     required this.groupName,
     required this.groupId,
-    required this.onTap,
+    required this.onTap, required Padding footer,
   });
 
   @override

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../components/group_card.dart';
+import 'package:islander_chat/components/group_card.dart';
+import 'chatroom_page.dart';
 import 'direct_messages.dart';
 
 class MainPage extends StatefulWidget {
@@ -51,6 +52,7 @@ class _MainPageState extends State<MainPage> {
                 await FirebaseFirestore.instance.collection('groups').add({
                   'name': groupName,
                   'owner': uid,
+                  'members': [uid], // Add creator as member
                   'createdAt': FieldValue.serverTimestamp(),
                 });
                 Navigator.pop(context);
@@ -168,68 +170,80 @@ class _MainPageState extends State<MainPage> {
                         final groupId = doc.id;
                         final ownerId = data['owner'];
                         final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+                        final members = List<String>.from(data['members'] ?? []);
+                        final isMember = members.contains(currentUserId);
 
                         return Stack(
                           children: [
                             SizedBox(
-                              width: 400,
-                              height: 780,
-                              child: GroupCard(
-                                groupName: groupName,
-                                groupId: groupId,
+                              width: 250, // Adjusted size
+                              height: 450, // Adjusted size
+                              child: InkWell(
                                 onTap: () {
-                                  Navigator.pushNamed(
-                                    context,
-                                    '/group_detail',
-                                    arguments: {
-                                      'groupId': groupId,
-                                      'groupName': groupName
-                                    },
-                                  );
+                                  if (groupName == 'COSC Capstone') {
+                                    // Replace 'some_chatroom_id' with the actual chatroomId
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => ChatroomPage(
+                                          groupId: groupId,
+                                          chatroomId: 'some_chatroom_id', // Replace with actual chatroomId
+                                          chatroomName: groupName,
+                                        ),
+                                      ),
+                                    );
+                                  } else {
+                                    // Handle other groups (if needed)
+                                  }
                                 },
-                              ),
-                            ),
-                            if (ownerId == currentUserId)
-                              Positioned(
-                                top: 8,
-                                right: 8,
-                                child: IconButton(
-                                  icon: const Icon(Icons.close),
-                                  color: Colors.red,
-                                  tooltip: 'Delete Group',
-                                  onPressed: () => confirmDeleteGroup(groupId),
+                                child: GroupCard(
+                                  groupName: groupName,
+                                  groupId: groupId,
+                                  onTap: () {
+                                    if (groupName == 'COSC Capstone') {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => ChatroomPage(
+                                            groupId: groupId,
+                                            chatroomId: 'some_chatroom_id', // Replace with actual chatroomId
+                                            chatroomName: groupName,
+                                          ),
+                                        ),
+                                      );
+                                    } else {
+                                      // Handle other groups (if needed)
+                                    }
+                                  },
+                                  footer: Padding(
+                                    padding: const EdgeInsets.only(top: 12.0),
+                                    child: ElevatedButton(
+                                      onPressed: () async {
+                                        final groupRef = FirebaseFirestore.instance
+                                            .collection('groups')
+                                            .doc(groupId);
+                                        if (isMember) {
+                                          await groupRef.update({
+                                            'members': FieldValue.arrayRemove([currentUserId])
+                                          });
+                                        } else {
+                                          await groupRef.update({
+                                            'members': FieldValue.arrayUnion([currentUserId])
+                                          });
+                                        }
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: isMember ? Colors.red : Colors.green,
+                                      ),
+                                      child: Text(isMember ? 'Leave Class' : 'Join Class'),
+                                    ),
+                                  ), 
                                 ),
                               ),
+                            ),
                           ],
                         );
                       }).toList(),
-                      SizedBox(
-                        width: 160,
-                        height: 160,
-                        child: InkWell(
-                          onTap: showCreateGroupDialog,
-                          borderRadius: BorderRadius.circular(16),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.secondaryContainer,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: Theme.of(context).colorScheme.outline,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
-                                  blurRadius: 12,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: const Center(
-                              child: Icon(Icons.add, size: 40),
-                            ),
-                          ),
-                        ),
-                      ),
                     ],
                   ),
                 ),

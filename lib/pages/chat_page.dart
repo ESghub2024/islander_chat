@@ -1,8 +1,5 @@
-import 'dart:io';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:islander_chat/components/chat_bubble.dart';
@@ -50,14 +47,13 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
-  // void sendMessage() async {
-  //   if (_messageController.text.isNotEmpty) {
-  //     await _chatService.sendMessage(
-  //       widget.receiverUserID, _messageController.text);
-
-  //     _messageController.clear();
-  //   }
-  // }
+void sendMessage() async {
+  if (_messageController.text.isNotEmpty) {
+    await _chatService.sendMessage(
+      widget.receiverUserID, _messageController.text, isImage: false);
+        _messageController.clear();
+        }
+      }
 
   @override
   Widget build(BuildContext context) {
@@ -127,6 +123,7 @@ class _ChatPageState extends State<ChatPage> {
       ),
     );
   }
+<<<<<<< Updated upstream
 
   Widget _buildMessageInput() {
     return Padding(
@@ -140,11 +137,24 @@ class _ChatPageState extends State<ChatPage> {
               obscureText: false,
             ),
           ),
-          // IconButton(
-          //   onPressed: sendMessage,
-          //   icon: const Icon(Icons.arrow_upward, size: 30),
-          // ),
+          IconButton(
+            onPressed: sendMessage,
+            icon: const Icon(Icons.arrow_upward, size: 30),
+          ),
         ],
+=======
+}
+
+
+//Build profile picture
+Widget _buildProfilePicture(String email) {
+  return Align(
+    alignment: Alignment.centerLeft,
+    child: CircleAvatar(
+      backgroundColor: Colors.lightGreen,
+      child: Text(email[0]),
+      radius: 20,
+>>>>>>> Stashed changes
       ),
     );
   }
