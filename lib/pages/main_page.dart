@@ -79,7 +79,7 @@ class _MainPageState extends State<MainPage> {
           ElevatedButton(
             onPressed: () async {
               await FirebaseFirestore.instance.collection('groups').doc(groupId).delete();
-              if (mounted) Navigator.pop(context);
+              Navigator.pop(context);
             },
             child: const Text('Delete'),
           ),
@@ -172,35 +172,14 @@ class _MainPageState extends State<MainPage> {
                         final currentUserId = FirebaseAuth.instance.currentUser?.uid;
                         final members = List<String>.from(data['members'] ?? []);
                         final isMember = members.contains(currentUserId);
-
+                        
                         return Stack(
-                          children: [
-                            SizedBox(
-                              width: 250, // Adjusted size
-                              height: 450, // Adjusted size
-                              child: InkWell(
-                                onTap: () {
-                                  if (groupName == 'COSC Capstone') {
-                                    // Replace 'some_chatroom_id' with the actual chatroomId
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => ChatroomPage(
-                                          groupId: groupId,
-                                          chatroomId: 'some_chatroom_id', // Replace with actual chatroomId
-                                          chatroomName: groupName,
-                                        ),
-                                      ),
-                                    );
-                                  } else {
-                                    // Handle other groups (if needed)
-                                  }
-                                },
-                                child: GroupCard(
-                                  groupName: groupName,
-                                  groupId: groupId,
-                                  onTap: () {
-                                    if (groupName == 'COSC Capstone') {
+                              children: [
+                                SizedBox(
+                                  width: 250, // Adjusted size
+                                  height: 450, // Adjusted size
+                                  child: InkWell(
+                                    onTap: () {
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
@@ -211,38 +190,61 @@ class _MainPageState extends State<MainPage> {
                                           ),
                                         ),
                                       );
-                                    } else {
-                                      // Handle other groups (if needed)
-                                    }
-                                  },
-                                  footer: Padding(
-                                    padding: const EdgeInsets.only(top: 12.0),
-                                    child: ElevatedButton(
-                                      onPressed: () async {
-                                        final groupRef = FirebaseFirestore.instance
-                                            .collection('groups')
-                                            .doc(groupId);
-                                        if (isMember) {
-                                          await groupRef.update({
-                                            'members': FieldValue.arrayRemove([currentUserId])
-                                          });
-                                        } else {
-                                          await groupRef.update({
-                                            'members': FieldValue.arrayUnion([currentUserId])
-                                          });
-                                        }
+                                    },
+                                    child: GroupCard(
+                                      groupName: groupName,
+                                      groupId: groupId,
+                                      footer: Padding(
+                                        padding: const EdgeInsets.only(top: 12.0),
+                                        child: Column(
+                                          children: [
+                                            ElevatedButton(
+                                              onPressed: () async {
+                                                final groupRef = FirebaseFirestore.instance
+                                                    .collection('groups')
+                                                    .doc(groupId);
+                                                if (isMember) {
+                                                  await groupRef.update({
+                                                    'members': FieldValue.arrayRemove([currentUserId])
+                                                  });
+                                                } else {
+                                                  await groupRef.update({
+                                                    'members': FieldValue.arrayUnion([currentUserId])
+                                                  });
+                                                }
+                                              },
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: isMember ? Colors.red : Colors.green,
+                                              ),
+                                              child: Text(isMember ? 'Leave Class' : 'Join Class'),
+                                            ),
+                                            const SizedBox(height: 8),
+                                            ElevatedButton(
+                                              onPressed: () => confirmDeleteGroup(groupId), // Delete button
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: Colors.red,
+                                              ),
+                                              child: const Text('Delete Group'),
+                                            ),
+                                          ],
+                                        ),
+                                      ), onTap: () { // Navigate to chatroom
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => ChatroomPage(
+                                              groupId: groupId,
+                                              chatroomId: 'some_chatroom_id', // Replace with actual chatroomId
+                                              chatroomName: groupName,
+                                            ),
+                                          ),
+                                        );
                                       },
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: isMember ? Colors.red : Colors.green,
-                                      ),
-                                      child: Text(isMember ? 'Leave Class' : 'Join Class'),
                                     ),
-                                  ), 
+                                  ),
                                 ),
-                              ),
-                            ),
-                          ],
-                        );
+                              ],
+                            );
                       }).toList(),
                     ],
                   ),
