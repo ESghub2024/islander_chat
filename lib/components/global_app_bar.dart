@@ -4,8 +4,14 @@ import 'package:firebase_auth/firebase_auth.dart';
 class GlobalAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
   final bool showInbox;
+  final VoidCallback? onAddGroup;
 
-  const GlobalAppBar({super.key, required this.title, this.showInbox = true});
+  const GlobalAppBar({
+    super.key,
+    required this.title,
+    this.showInbox = true,
+    this.onAddGroup,
+  });
 
   void logout(BuildContext context) async {
     await FirebaseAuth.instance.signOut();
@@ -17,6 +23,12 @@ class GlobalAppBar extends StatelessWidget implements PreferredSizeWidget {
     return AppBar(
       title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
       actions: [
+        if (onAddGroup != null)
+          IconButton(
+            icon: const Icon(Icons.group_add),
+            tooltip: 'Create Group',
+            onPressed: onAddGroup,
+          ),
         if (showInbox)
           IconButton(
             icon: const Icon(Icons.mail_outline),

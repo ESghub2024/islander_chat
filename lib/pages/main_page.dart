@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:islander_chat/components/group_card.dart';
+import 'package:islander_chat/components/global_app_bar.dart';
 import 'chatroom_page.dart';
 import 'direct_messages.dart';
 
@@ -52,7 +53,7 @@ class _MainPageState extends State<MainPage> {
                 await FirebaseFirestore.instance.collection('groups').add({
                   'name': groupName,
                   'owner': uid,
-                  'members': [uid], // Add creator as member
+                  'members': [uid],
                   'createdAt': FieldValue.serverTimestamp(),
                 });
                 Navigator.pop(context);
@@ -96,35 +97,9 @@ class _MainPageState extends State<MainPage> {
         '/inbox': (context) => const DirectMessages(),
       },
       home: Scaffold(
-        appBar: AppBar(
-          title: const Text(
-            'Your Classrooms',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.mail_outline),
-              tooltip: 'Direct Messages',
-              onPressed: () {
-                Navigator.pushNamed(context, '/inbox');
-              },
-            ),
-            IconButton(
-              icon: const Icon(Icons.brightness_6),
-              tooltip: 'Toggle Theme',
-              onPressed: toggleTheme,
-            ),
-            IconButton(
-              icon: const Icon(Icons.person),
-              tooltip: 'Profile (not implemented)',
-              onPressed: () {},
-            ),
-            IconButton(
-              icon: const Icon(Icons.logout),
-              tooltip: 'Logout',
-              onPressed: logout,
-            ),
-          ],
+        appBar: GlobalAppBar(
+          title: 'Your Classrooms',
+          onAddGroup: showCreateGroupDialog,
         ),
         body: StreamBuilder<QuerySnapshot>(
           stream: FirebaseFirestore.instance
@@ -142,7 +117,7 @@ class _MainPageState extends State<MainPage> {
             final groups = snapshot.data!.docs;
 
             return SizedBox(
-              width: 1900,
+              width: double.infinity,
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.all(24),
@@ -163,90 +138,88 @@ class _MainPageState extends State<MainPage> {
                   child: Wrap(
                     spacing: 16,
                     runSpacing: 16,
-                    children: [
-                      ...groups.map((doc) {
-                        final data = doc.data() as Map<String, dynamic>;
-                        final groupName = data['name'] ?? 'Unnamed Group';
-                        final groupId = doc.id;
-                        final ownerId = data['owner'];
-                        final currentUserId = FirebaseAuth.instance.currentUser?.uid;
-                        final members = List<String>.from(data['members'] ?? []);
-                        final isMember = members.contains(currentUserId);
-                        
-                        return Stack(
-                              children: [
-                                SizedBox(
-                                  width: 250, // Adjusted size
-                                  height: 450, // Adjusted size
-                                  child: InkWell(
-                                    onTap: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => ChatroomPage(
-                                            groupId: groupId,
-                                            chatroomId: 'some_chatroom_id', // Replace with actual chatroomId
-                                            chatroomName: groupName,
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                    child: GroupCard(
-                                      groupName: groupName,
-                                      groupId: groupId,
-                                      footer: Padding(
-                                        padding: const EdgeInsets.only(top: 12.0),
-                                        child: Column(
-                                          children: [
-                                            ElevatedButton(
-                                              onPressed: () async {
-                                                final groupRef = FirebaseFirestore.instance
-                                                    .collection('groups')
-                                                    .doc(groupId);
-                                                if (isMember) {
-                                                  await groupRef.update({
-                                                    'members': FieldValue.arrayRemove([currentUserId])
-                                                  });
-                                                } else {
-                                                  await groupRef.update({
-                                                    'members': FieldValue.arrayUnion([currentUserId])
-                                                  });
-                                                }
-                                              },
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor: isMember ? Colors.red : Colors.green,
-                                              ),
-                                              child: Text(isMember ? 'Leave Class' : 'Join Class'),
-                                            ),
-                                            const SizedBox(height: 8),
-                                            ElevatedButton(
-                                              onPressed: () => confirmDeleteGroup(groupId), // Delete button
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor: Colors.red,
-                                              ),
-                                              child: const Text('Delete Group'),
-                                            ),
-                                          ],
-                                        ),
-                                      ), onTap: () { // Navigate to chatroom
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) => ChatroomPage(
-                                              groupId: groupId,
-                                              chatroomId: 'some_chatroom_id', // Replace with actual chatroomId
-                                              chatroomName: groupName,
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ),
+                    children: groups.map((doc) {
+                      final data = doc.data() as Map<String, dynamic>;
+                      final groupName = data['name'] ?? 'Unnamed Group';
+                      final groupId = doc.id;
+                      final ownerId = data['owner'];
+                      final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+                      final members = List<String>.from(data['members'] ?? []);
+                      final isMember = members.contains(currentUserId);
+
+                      return SizedBox(
+                        width: 250,
+                        height: 450,
+                        child: GroupCard(
+                          groupName: groupName,
+                          groupId: groupId,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ChatroomPage(
+                                  groupId: groupId,
+                                  chatroomId: 'some_chatroom_id', // Replace if needed
+                                  chatroomName: groupName,
                                 ),
-                              ],
+                              ),
                             );
-                      }).toList(),
-                    ],
+                          },
+                          footer: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              ElevatedButton(
+                                onPressed: () {
+                                  final groupRef = FirebaseFirestore.instance
+                                      .collection('groups')
+                                      .doc(groupId);
+                                  if (isMember) {
+                                    showDialog(
+                                      context: context,
+                                      builder: (_) => AlertDialog(
+                                        title: const Text('Leave Class'),
+                                        content: const Text('Are you sure you want to leave this class?'),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.pop(context),
+                                            child: const Text('Cancel'),
+                                          ),
+                                          ElevatedButton(
+                                            onPressed: () async {
+                                              await groupRef.update({
+                                                'members': FieldValue.arrayRemove([currentUserId])
+                                              });
+                                              Navigator.pop(context);
+                                            },
+                                            child: const Text('Leave'),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  } else {
+                                    groupRef.update({
+                                      'members': FieldValue.arrayUnion([currentUserId])
+                                    });
+                                  }
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: isMember ? Colors.red : Colors.green,
+                                ),
+                                child: Text(isMember ? 'Leave' : 'Join'),
+                              ),
+                              if (ownerId == currentUserId)
+                                ElevatedButton(
+                                  onPressed: () => confirmDeleteGroup(groupId),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.red,
+                                  ),
+                                  child: const Text('Delete'),
+                                ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }).toList(),
                   ),
                 ),
               ),

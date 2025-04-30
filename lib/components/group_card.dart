@@ -4,12 +4,14 @@ class GroupCard extends StatelessWidget {
   final String groupName;
   final String groupId;
   final VoidCallback onTap;
+  final Widget footer;
 
   const GroupCard({
     super.key,
     required this.groupName,
     required this.groupId,
-    required this.onTap, required Padding footer,
+    required this.onTap,
+    required this.footer,
   });
 
   @override
@@ -68,6 +70,8 @@ class GroupCard extends StatelessWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
+            const SizedBox(height: 12),
+            footer, // 🎯 Injected footer
           ],
         ),
       ),
