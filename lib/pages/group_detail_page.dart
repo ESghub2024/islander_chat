@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class GroupDetailPage extends StatefulWidget {
@@ -23,36 +22,39 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Create New Chatroom'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(hintText: 'Enter chatroom name'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Create New Chatroom'),
+            content: TextField(
+              controller: controller,
+              decoration: const InputDecoration(
+                hintText: 'Enter chatroom name',
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  String roomName = controller.text.trim();
+                  if (roomName.isNotEmpty) {
+                    await FirebaseFirestore.instance
+                        .collection('groups')
+                        .doc(widget.groupId)
+                        .collection('chatrooms')
+                        .add({
+                          'name': roomName,
+                          'createdAt': FieldValue.serverTimestamp(),
+                        });
+                    Navigator.pop(context);
+                  }
+                },
+                child: const Text('Create'),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () async {
-              String roomName = controller.text.trim();
-              if (roomName.isNotEmpty) {
-                await FirebaseFirestore.instance
-                    .collection('groups')
-                    .doc(widget.groupId)
-                    .collection('chatrooms')
-                    .add({
-                  'name': roomName,
-                  'createdAt': FieldValue.serverTimestamp(),
-                });
-                Navigator.pop(context);
-              }
-            },
-            child: const Text('Create'),
-          ),
-        ],
-      ),
     );
   }
 
@@ -70,12 +72,13 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
         ],
       ),
       body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('groups')
-            .doc(widget.groupId)
-            .collection('chatrooms')
-            .orderBy('createdAt')
-            .snapshots(),
+        stream:
+            FirebaseFirestore.instance
+                .collection('groups')
+                .doc(widget.groupId)
+                .collection('chatrooms')
+                .orderBy('createdAt')
+                .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             return const Center(child: Text('Something went wrong.'));

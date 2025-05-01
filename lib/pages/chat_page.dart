@@ -35,10 +35,11 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   void _loadReceiverNickname() async {
-    final doc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(widget.receiverUserID)
-        .get();
+    final doc =
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(widget.receiverUserID)
+            .get();
 
     if (doc.exists) {
       setState(() {
@@ -47,13 +48,16 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
-void sendMessage() async {
-  if (_messageController.text.isNotEmpty) {
-    await _chatService.sendMessage(
-      widget.receiverUserID, _messageController.text, isImage: false);
-        _messageController.clear();
-        }
-      }
+  void sendMessage() async {
+    if (_messageController.text.isNotEmpty) {
+      await _chatService.sendMessage(
+        widget.receiverUserID,
+        _messageController.text,
+        isImage: false,
+      );
+      _messageController.clear();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -63,10 +67,7 @@ void sendMessage() async {
         showInbox: true,
       ),
       body: Column(
-        children: [
-          Expanded(child: _buildMessageList()),
-          _buildMessageInput(),
-        ],
+        children: [Expanded(child: _buildMessageList()), _buildMessageInput()],
       ),
     );
   }
@@ -74,7 +75,9 @@ void sendMessage() async {
   Widget _buildMessageList() {
     return StreamBuilder(
       stream: _chatService.getMessages(
-        widget.receiverUserID, _firebaseAuth.currentUser!.uid),
+        widget.receiverUserID,
+        _firebaseAuth.currentUser!.uid,
+      ),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return Text('Error: ${snapshot.error}');
@@ -84,9 +87,10 @@ void sendMessage() async {
         }
         return ListView(
           padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-          children: snapshot.data!.docs
-              .map((document) => _buildMessageItem(document))
-              .toList(),
+          children:
+              snapshot.data!.docs
+                  .map((document) => _buildMessageItem(document))
+                  .toList(),
         );
       },
     );
@@ -123,7 +127,6 @@ void sendMessage() async {
       ),
     );
   }
-<<<<<<< Updated upstream
 
   Widget _buildMessageInput() {
     return Padding(
@@ -142,19 +145,18 @@ void sendMessage() async {
             icon: const Icon(Icons.arrow_upward, size: 30),
           ),
         ],
-=======
-}
+      ),
+    );
+  }
 
-
-//Build profile picture
-Widget _buildProfilePicture(String email) {
-  return Align(
-    alignment: Alignment.centerLeft,
-    child: CircleAvatar(
-      backgroundColor: Colors.lightGreen,
-      child: Text(email[0]),
-      radius: 20,
->>>>>>> Stashed changes
+  //Build profile picture
+  Widget _buildProfilePicture(String email) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: CircleAvatar(
+        backgroundColor: Colors.lightGreen,
+        radius: 20,
+        child: Text(email[0]),
       ),
     );
   }
