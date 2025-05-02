@@ -14,24 +14,25 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  //Controllers
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
 
-  //Login
-  void signIn() async {
-    //Authentication service
+  Future<void> signIn() async {
     final authService = Provider.of<AuthService>(context, listen: false);
 
     try {
       await authService.signInWithEmailandPassword(
-        emailController.text,
+        emailController.text.trim(),
         passwordController.text,
       );
+      // On successful login, navigate to main page
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/main');
+      }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
     }
   }
 
@@ -43,39 +44,29 @@ class _LoginPageState extends State<LoginPage> {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 50.0),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              const SizedBox(height: 40.0),
-              //TAMUCC Logo
               Image.asset('images/Islander.png', scale: 1.5),
-
-              //Welcome to Islanders Chat
+              const SizedBox(height: 20.0),
               const Text(
                 "Welcome to the Islander Chat Application!",
                 style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 20.0),
-
-              //Email
               MyTextField(
                 controller: emailController,
                 hintText: "Student Email",
                 obscureText: false,
               ),
               const SizedBox(height: 20.0),
-
-              //Password
               MyTextField(
                 controller: passwordController,
                 hintText: "Password",
                 obscureText: true,
               ),
               const SizedBox(height: 20.0),
-
-              //Sigin
               MyButtons(onTap: signIn, text: "Login"),
               const SizedBox(height: 20.0),
-
-              //Register
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

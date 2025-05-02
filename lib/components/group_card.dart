@@ -1,77 +1,54 @@
 import 'package:flutter/material.dart';
 
+/// A simple card widget displaying a classroom name and ID, with a customizable footer and tap handler.
 class GroupCard extends StatelessWidget {
   final String groupName;
   final String groupId;
-  final VoidCallback onTap;
   final Widget footer;
+  final VoidCallback onTap;
 
   const GroupCard({
-    super.key,
+    Key? key,
     required this.groupName,
     required this.groupId,
-    required this.onTap,
     required this.footer,
-  });
+    required this.onTap,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
+    final theme = Theme.of(context);
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(12),
       child: Container(
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1E1E1E) : Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Theme.of(context).colorScheme.outline),
+          color: theme.cardColor,
+          borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.2),
-              blurRadius: 12,
-              offset: const Offset(0, 6),
-            ),
-            BoxShadow(
-              color: Colors.white.withOpacity(0.05),
-              blurRadius: 0,
-              spreadRadius: -4,
-              offset: const Offset(-1, -1),
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
-        padding: const EdgeInsets.all(24),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              Icons.class_,
-              size: 48,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-            const SizedBox(height: 24),
             Text(
               groupName,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white : Colors.black87,
-                  ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.titleLarge,
             ),
-            const Spacer(),
+            const SizedBox(height: 4),
             Text(
-              'Group ID:\n$groupId',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: isDark ? Colors.grey[400] : Colors.grey[700],
-                  ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+              'ID: $groupId',
+              style: theme.textTheme.bodySmall,
             ),
             const SizedBox(height: 12),
-            footer, // 🎯 Injected footer
+            footer,
           ],
         ),
       ),

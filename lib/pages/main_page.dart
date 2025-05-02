@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:islander_chat/components/group_card.dart';
 import 'package:islander_chat/components/global_app_bar.dart';
-import 'chatroom_page.dart';
-import 'direct_messages.dart';
+import 'package:islander_chat/components/group_card.dart';
+import 'package:islander_chat/pages/chatroom_page.dart';
+import 'package:islander_chat/pages/direct_messages.dart';
 import 'package:islander_chat/pages/profile_page.dart';
+import 'package:islander_chat/services/theme_service.dart';
+import 'package:provider/provider.dart';
 
 class MainPage extends StatefulWidget {
-  const MainPage({super.key});
+  const MainPage({Key? key}) : super(key: key);
 
   @override
   State<MainPage> createState() => _MainPageState();
@@ -18,281 +21,198 @@ class _MainPageState extends State<MainPage> {
   bool isDarkMode = false;
 
   void toggleTheme() {
-    setState(() {
-      isDarkMode = !isDarkMode;
-    });
+    setState(() => isDarkMode = !isDarkMode);
   }
 
   void logout() async {
     await FirebaseAuth.instance.signOut();
-    if (mounted) {
-      Navigator.pushReplacementNamed(context, '/login');
-    }
+    Navigator.of(context, rootNavigator: true).pushReplacementNamed('/login');
   }
 
   void goToProfileScreen() {
-    //go to profile screen
-    Navigator.of(
-      context,
-    ).push(MaterialPageRoute(builder: (_) => const ProfileScreen()));
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const ProfileScreen()));
   }
 
   void showCreateGroupDialog() {
-    final TextEditingController controller = TextEditingController();
-
+    final controller = TextEditingController();
     showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Create New Group'),
-            content: TextField(
-              controller: controller,
-              decoration: const InputDecoration(hintText: 'Enter group name'),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: () async {
-                  String groupName = controller.text.trim();
-                  if (groupName.isNotEmpty) {
-                    final uid = FirebaseAuth.instance.currentUser?.uid;
-                    await FirebaseFirestore.instance.collection('groups').add({
-                      'name': groupName,
-                      'owner': uid,
-                      'members': [uid], // Add creator as member
-                      'createdAt': FieldValue.serverTimestamp(),
-                    });
-                    Navigator.pop(context);
-                  }
-                },
-                child: const Text('Create'),
-              ),
-            ],
+      builder: (_) => AlertDialog(
+        title: const Text('Create New Classroom'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(hintText: 'Enter name'),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () async {
+              final name = controller.text.trim();
+              if (name.isNotEmpty) {
+                final uid = FirebaseAuth.instance.currentUser!.uid;
+                await FirebaseFirestore.instance.collection('groups').add({
+                  'name': name,
+                  'owner': uid,
+                  'members': [uid],
+                  'createdAt': FieldValue.serverTimestamp(),
+                });
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('Create'),
           ),
+        ],
+      ),
     );
   }
 
-  void confirmDeleteGroup(String groupId) {
+  void confirmDeleteGroup(String id) {
     showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Delete Group'),
-            content: const Text('Are you sure you want to delete this group?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: () async {
-                  await FirebaseFirestore.instance
-                      .collection('groups')
-                      .doc(groupId)
-                      .delete();
-                  Navigator.pop(context);
-                },
-                child: const Text('Delete'),
-              ),
-            ],
+      builder: (_) => AlertDialog(
+        title: const Text('Delete Classroom'),
+        content: const Text('Delete this classroom?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () async {
+              await FirebaseFirestore.instance
+                  .collection('groups')
+                  .doc(id)
+                  .delete();
+              Navigator.pop(context);
+            },
+            child: const Text('Delete'),
           ),
+        ],
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final currentUid = FirebaseAuth.instance.currentUser?.uid;
+
     return MaterialApp(
       theme: isDarkMode ? ThemeData.dark() : ThemeData.light(),
-      routes: {'/inbox': (context) => const DirectMessages()},
+      debugShowCheckedModeBanner: false,
+      routes: {
+        '/inbox': (_) => const DirectMessages(),
+      },
       home: Scaffold(
-        appBar: AppBar(
-          backgroundColor: const Color.fromARGB(255, 0, 103, 197),
-          title: const Text(
-            'Your Classrooms',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.mail_outline),
-              tooltip: 'Direct Messages',
-              onPressed: () {
-                Navigator.pushNamed(context, '/inbox');
-              },
-            ),
-            IconButton(
-              icon: const Icon(Icons.brightness_6),
-              tooltip: 'Toggle Theme',
-              onPressed: toggleTheme,
-            ),
-            IconButton(
-              icon: const Icon(Icons.person),
-              tooltip: 'Profile',
-              onPressed: goToProfileScreen,
-            ),
-            IconButton(
-              icon: const Icon(Icons.logout),
-              tooltip: 'Logout',
-              onPressed: logout,
-            ),
-          ],
+        appBar: GlobalAppBar(
+          title: 'Your Classrooms',
+          showSearch: true,
+          showInbox: true,
+          onAddGroup: showCreateGroupDialog,
+          onSearch: () {
+            Navigator.pushNamed(context, '/search');
+          },
+          onToggleTheme: () => context.read<ThemeService>().toggleTheme(),
+          onProfile: goToProfileScreen,
         ),
-        body: StreamBuilder<QuerySnapshot>(
-          stream:
-              FirebaseFirestore.instance
-                  .collection('groups')
-                  .orderBy('createdAt', descending: true)
-                  .snapshots(),
-          builder: (context, snapshot) {
-            if (snapshot.hasError) {
-              return const Center(child: Text('Something went wrong.'));
-            }
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
 
-            final groups = snapshot.data!.docs;
+        body: currentUid == null
+            ? const Center(
+                child: Text('Please log in to view your classrooms.'),
+              )
+            : StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('groups')
+                    .where('members', arrayContains: currentUid)
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.hasError) {
+                    return Center(child: Text('Error: ${snapshot.error}'));
+                  }
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
 
-            return SizedBox(
-              width: double.infinity,
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.all(24),
-                child: Container(
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.shade400),
-                    borderRadius: BorderRadius.circular(16),
-                    color: Theme.of(context).colorScheme.surface,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 16,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  padding: const EdgeInsets.all(24),
-                  child: Wrap(
-                    spacing: 16,
-                    runSpacing: 16,
-                    children: [
-                      ...groups.map((doc) {
-                        final data = doc.data() as Map<String, dynamic>;
-                        final groupName = data['name'] ?? 'Unnamed Group';
-                        final groupId = doc.id;
-                        final ownerId = data['owner'];
-                        final currentUserId =
-                            FirebaseAuth.instance.currentUser?.uid;
-                        final members = List<String>.from(
-                          data['members'] ?? [],
-                        );
-                        final isMember = members.contains(currentUserId);
+                  final docs = snapshot.data!.docs;
+                  if (docs.isEmpty) {
+                    return const Center(
+                        child: Text('You are not enrolled in any classrooms.'));
+                  }
 
-                        return Stack(
-                          children: [
-                            SizedBox(
-                              width: 250, // Adjusted size
-                              height: 450, // Adjusted size
-                              child: InkWell(
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder:
-                                          (context) => ChatroomPage(
-                                            groupId: groupId,
-                                            chatroomId:
-                                                'some_chatroom_id', // Replace with actual chatroomId
-                                            chatroomName: groupName,
-                                          ),
-                                    ),
-                                  );
-                                },
-                                child: GroupCard(
-                                  groupName: groupName,
-                                  groupId: groupId,
-                                  footer: Padding(
-                                    padding: const EdgeInsets.only(top: 12.0),
-                                    child: Column(
-                                      children: [
-                                        ElevatedButton(
-                                          onPressed: () async {
-                                            final groupRef = FirebaseFirestore
-                                                .instance
-                                                .collection('groups')
-                                                .doc(groupId);
-                                            if (isMember) {
-                                              await groupRef.update({
-                                                'members':
-                                                    FieldValue.arrayRemove([
-                                                      currentUserId,
-                                                    ]),
-                                              });
-                                            } else {
-                                              await groupRef.update({
-                                                'members':
-                                                    FieldValue.arrayUnion([
-                                                      currentUserId,
-                                                    ]),
-                                              });
-                                            }
-                                          },
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor:
-                                                isMember
-                                                    ? Colors.red
-                                                    : Colors.green,
-                                          ),
-                                          child: Text(
-                                            isMember
-                                                ? 'Leave Class'
-                                                : 'Join Class',
-                                          ),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        ElevatedButton(
-                                          onPressed:
-                                              () => confirmDeleteGroup(
-                                                groupId,
-                                              ), // Delete button
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.red,
-                                          ),
-                                          child: const Text('Delete Group'),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  onTap: () {
-                                    // Navigate to chatroom
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder:
-                                            (context) => ChatroomPage(
-                                              groupId: groupId,
-                                              chatroomId:
-                                                  'some_chatroom_id', // Replace with actual chatroomId
-                                              chatroomName: groupName,
-                                            ),
-                                      ),
-                                    );
-                                  },
-                                ),
+                  return ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: docs.length,
+                    itemBuilder: (context, index) {
+                      final doc = docs[index];
+                      final data = doc.data() as Map<String, dynamic>;
+                      final name = data['name'] as String? ?? 'Unnamed';
+                      final id = doc.id;
+                      final owner = data['owner'] as String?;
+                      final isOwner = owner == currentUid;
+
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: GroupCard(
+                          groupName: name,
+                          groupId: id,
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ChatroomPage(
+                                groupId: id,
+                                chatroomName: name,
                               ),
                             ),
-                          ],
-                        );
-                      }),
-                    ],
-                  ),
-                ),
+                          ),
+                          footer: Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed: () async {
+                                    if (isOwner) {
+                                      await FirebaseFirestore.instance
+                                          .collection('groups')
+                                          .doc(id)
+                                          .delete();
+                                    } else {
+                                      await FirebaseFirestore.instance
+                                          .collection('groups')
+                                          .doc(id)
+                                          .update({
+                                        'members': FieldValue.arrayRemove(
+                                            [currentUid])
+                                      });
+                                    }
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                      backgroundColor:
+                                          isOwner ? Colors.red : Colors.orange),
+                                  child:
+                                      Text(isOwner ? 'Delete' : 'Leave'),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              IconButton(
+                                icon: const Icon(Icons.copy),
+                                tooltip: 'Copy ID',
+                                onPressed: () {
+                                  Clipboard.setData(
+                                      ClipboardData(text: id));
+                                  ScaffoldMessenger.of(context)
+                                      .showSnackBar(const SnackBar(
+                                          content:
+                                              Text('Classroom ID copied')));
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
               ),
-            );
-          },
-        ),
       ),
     );
   }
