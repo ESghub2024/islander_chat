@@ -100,7 +100,7 @@ class _SearchPageState extends State<SearchPage> {
                             MaterialPageRoute(
                               builder: (_) => ChatroomPage(
                                 groupId: groupId,
-                                chatroomName: groupName,
+                                chatroomName: groupName, chatroomId: '',
                               ),
                             ),
                           );
