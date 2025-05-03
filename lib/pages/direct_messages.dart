@@ -1,90 +1,86 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:islander_chat/components/global_app_bar.dart';
 import 'package:islander_chat/pages/chat_page.dart';
-import 'package:islander_chat/services/theme_service.dart';
-import 'package:provider/provider.dart';
+import 'package:islander_chat/components/global_app_bar.dart';
 
 class DirectMessages extends StatefulWidget {
-  const DirectMessages({Key? key}) : super(key: key);
+  const DirectMessages({super.key});
 
   @override
   State<DirectMessages> createState() => _DirectMessagesState();
 }
 
 class _DirectMessagesState extends State<DirectMessages> {
-  final _auth = FirebaseAuth.instance;
-  final Stream<QuerySnapshot> _usersStream =
-      FirebaseFirestore.instance.collection('users').snapshots();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Use your global app bar here:
-      appBar: GlobalAppBar(
+      appBar: const GlobalAppBar(
         title: 'Direct Messages',
         showInbox: false,
+        actions: [],
       ),
-      body: SafeArea(
-        child: StreamBuilder<QuerySnapshot>(
-          stream: _usersStream,
-          builder: (context, snapshot) {
-            if (snapshot.hasError) {
-              return Center(
-                child: Text(
-                  'Error loading users:\n${snapshot.error}',
-                  textAlign: TextAlign.center,
-                ),
-              );
-            }
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            final docs = snapshot.data!.docs;
-            if (docs.isEmpty) {
-              return const Center(child: Text('No other users found.'));
-            }
-            return ListView.builder(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              itemCount: docs.length,
-              itemBuilder: (context, index) {
-                return _buildUserListItem(docs[index]);
-              },
-            );
-          },
-        ),
-      ),
+      body: _buildUserList(),
+    );
+  }
+
+  Widget _buildUserList() {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance.collection('users').snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return const Center(child: Text('Something went wrong.'));
+        }
+
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        return ListView(
+          children: snapshot.data!.docs
+              .map<Widget>((doc) => _buildUserListItem(doc))
+              .toList(),
+        );
+      },
     );
   }
 
   Widget _buildUserListItem(DocumentSnapshot document) {
-    final data = document.data()! as Map<String, dynamic>;
-    final currentEmail = _auth.currentUser?.email;
+    final data = document.data() as Map<String, dynamic>?;
 
-    // don't show yourself in the DM list
-    if (data['email'] == currentEmail) {
+    if (data == null) return const SizedBox.shrink();
+
+    final currentUserEmail = _auth.currentUser?.email ?? '';
+    final userEmail = data['email'] as String? ?? '';
+    final userId = data['uid'] as String?;
+    final userNickname = data['nickname'] as String? ?? userEmail;
+
+    if (currentUserEmail == userEmail || userId == null) {
       return const SizedBox.shrink();
     }
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Material(
-        elevation: 2,
-        borderRadius: BorderRadius.circular(12),
+        elevation: 6,
+        borderRadius: BorderRadius.circular(16),
         color: Theme.of(context).brightness == Brightness.dark
             ? const Color(0xFF2A2A2A)
             : const Color(0xFFF4F4F4),
         child: ListTile(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          leading: const CircleAvatar(child: Icon(Icons.person)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          leading: const CircleAvatar(
+            child: Icon(Icons.person),
+          ),
           title: Text(
-            data['nickname'] ?? data['email'] ?? 'Unknown',
-            style: Theme.of(context)
-                .textTheme
-                .bodyMedium
-                ?.copyWith(fontWeight: FontWeight.w600),
+            userNickname,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
           ),
           trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 18),
           onTap: () {
@@ -92,8 +88,8 @@ class _DirectMessagesState extends State<DirectMessages> {
               context,
               MaterialPageRoute(
                 builder: (_) => ChatPage(
-                  receiverUserEmail: data['email'] as String,
-                  receiverUserID: data['uid'] as String,
+                  receiverUserEmail: userEmail,
+                  receiverUserID: userId,
                 ),
               ),
             );

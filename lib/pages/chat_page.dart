@@ -1,11 +1,13 @@
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:islander_chat/components/chat_bubble.dart';
 import 'package:islander_chat/components/my_text_field.dart';
 import 'package:islander_chat/services/chat/chat_service.dart';
-import 'package:islander_chat/components/global_app_bar.dart';
 
 class ChatPage extends StatefulWidget {
   final String receiverUserEmail;
@@ -26,33 +28,12 @@ class _ChatPageState extends State<ChatPage> {
   final ChatService _chatService = ChatService();
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
 
-  String? receiverNickname;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadReceiverNickname();
-  }
-
-  void _loadReceiverNickname() async {
-    final doc =
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(widget.receiverUserID)
-            .get();
-
-    if (doc.exists) {
-      setState(() {
-        receiverNickname = doc.data()!['nickname'];
-      });
-    }
-  }
-
   void sendMessage() async {
-    if (_messageController.text.isNotEmpty) {
-      await _chatService.sendMessage(
+    final message = _messageController.text.trim();
+    if (message.isNotEmpty) {
+      await _chatService.sendDirectMessage(
         widget.receiverUserID,
-        _messageController.text,
+        message,
         isImage: false,
       );
       _messageController.clear();
@@ -62,75 +43,61 @@ class _ChatPageState extends State<ChatPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: GlobalAppBar(
-        title: receiverNickname ?? widget.receiverUserEmail,
-        showInbox: true,
-      ),
+      appBar: AppBar(title: Text(widget.receiverUserEmail)),
       body: Column(
-        children: [Expanded(child: _buildMessageList()), _buildMessageInput()],
+        children: [
+          Expanded(child: _buildMessageList()),
+          _buildMessageInput(),
+          _buildPostImageButton(),
+        ],
       ),
     );
   }
 
   Widget _buildMessageList() {
+    final currentUserId = _firebaseAuth.currentUser?.uid;
+    if (currentUserId == null) return const SizedBox.shrink();
+
     return StreamBuilder(
-      stream: _chatService.getMessages(
-        widget.receiverUserID,
-        _firebaseAuth.currentUser!.uid,
-      ),
+      stream: _chatService.getDirectMessages(currentUserId, widget.receiverUserID),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return Text('Error: ${snapshot.error}');
+          return Center(child: Text('Error: ${snapshot.error}'));
         }
+
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
+
         return ListView(
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-          children:
-              snapshot.data!.docs
-                  .map((document) => _buildMessageItem(document))
-                  .toList(),
+          reverse: true,
+          children: snapshot.data!.docs
+              .map((document) => _buildMessageItem(document))
+              .toList(),
         );
       },
     );
   }
 
   Widget _buildMessageItem(DocumentSnapshot document) {
-    Map<String, dynamic> data = document.data() as Map<String, dynamic>;
-    bool isSender = data['senderID'] == _firebaseAuth.currentUser!.uid;
+    final data = document.data() as Map<String, dynamic>;
+    final isMe = data['senderID'] == _firebaseAuth.currentUser?.uid;
+    final message = data['message'] ?? '';
+    final isImage = data['isImage'] == true;
 
     return Align(
-      alignment: isSender ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 6),
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: isSender ? Colors.blueAccent : Colors.grey.shade300,
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(16),
-            topRight: const Radius.circular(16),
-            bottomLeft: Radius.circular(isSender ? 16 : 0),
-            bottomRight: Radius.circular(isSender ? 0 : 16),
-          ),
-        ),
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.75,
-        ),
-        child: Text(
-          data['message'],
-          style: TextStyle(
-            color: isSender ? Colors.white : Colors.black87,
-            fontSize: 16,
-          ),
-        ),
+      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+      child: ChatBubble(
+        message: message,
+        isMe: isMe,
+        isImage: isImage,
       ),
     );
   }
 
   Widget _buildMessageInput() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4),
       child: Row(
         children: [
           Expanded(
@@ -149,15 +116,42 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  //Build profile picture
-  Widget _buildProfilePicture(String email) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: CircleAvatar(
-        backgroundColor: Colors.lightGreen,
-        radius: 20,
-        child: Text(email[0]),
+  Widget _buildPostImageButton() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: IconButton(
+        onPressed: _pickImage,
+        icon: const Icon(Icons.image),
+        tooltip: 'Send Image',
       ),
     );
+  }
+
+  Future<void> _pickImage() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    if (image == null) return;
+
+    try {
+      File file = File(image.path);
+      String fileName = '${DateTime.now().millisecondsSinceEpoch}_${image.name}';
+      String filePath = 'images/$fileName';
+
+      await FirebaseStorage.instance.ref(filePath).putFile(file);
+      String downloadUrl = await FirebaseStorage.instance.ref(filePath).getDownloadURL();
+
+      await _chatService.sendDirectMessage(
+        widget.receiverUserID,
+        downloadUrl,
+        isImage: true,
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to upload image: $e')),
+      );
+    }
+  print("Current UID: ${FirebaseAuth.instance.currentUser?.uid}");
+  print("Receiver UID: ${widget.receiverUserID}");
+  
   }
 }

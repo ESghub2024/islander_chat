@@ -1,17 +1,14 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:islander_chat/components/global_app_bar.dart';
 import 'package:islander_chat/components/group_card.dart';
+import 'package:islander_chat/components/global_app_bar.dart';
 import 'package:islander_chat/pages/chatroom_page.dart';
+import 'package:islander_chat/pages/create_group_page.dart';
 import 'package:islander_chat/pages/direct_messages.dart';
-import 'package:islander_chat/pages/profile_page.dart';
-import 'package:islander_chat/services/theme_service.dart';
-import 'package:provider/provider.dart';
 
 class MainPage extends StatefulWidget {
-  const MainPage({Key? key}) : super(key: key);
+  const MainPage({super.key});
 
   @override
   State<MainPage> createState() => _MainPageState();
@@ -19,200 +16,145 @@ class MainPage extends StatefulWidget {
 
 class _MainPageState extends State<MainPage> {
   bool isDarkMode = false;
+  String searchQuery = '';
+  final TextEditingController searchController = TextEditingController();
+  Timer? _debounce;
+
+  Stream<QuerySnapshot> getGroups() {
+    return FirebaseFirestore.instance
+        .collection('groups')
+        .orderBy('createdAt', descending: true)
+        .snapshots();
+  }
 
   void toggleTheme() {
     setState(() => isDarkMode = !isDarkMode);
   }
 
-  void logout() async {
-    await FirebaseAuth.instance.signOut();
-    Navigator.of(context, rootNavigator: true).pushReplacementNamed('/login');
+  void onSearchChanged(String query) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      setState(() => searchQuery = query.trim());
+    });
   }
 
-  void goToProfileScreen() {
-    Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => const ProfileScreen()));
-  }
-
-  void showCreateGroupDialog() {
-    final controller = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Create New Classroom'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(hintText: 'Enter name'),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () async {
-              final name = controller.text.trim();
-              if (name.isNotEmpty) {
-                final uid = FirebaseAuth.instance.currentUser!.uid;
-                await FirebaseFirestore.instance.collection('groups').add({
-                  'name': name,
-                  'owner': uid,
-                  'members': [uid],
-                  'createdAt': FieldValue.serverTimestamp(),
-                });
-                Navigator.pop(context);
-              }
-            },
-            child: const Text('Create'),
-          ),
-        ],
+  void navigateToCreateGroup({DocumentSnapshot? existingGroup}) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CreateGroupPage(groupDoc: existingGroup),
       ),
     );
   }
 
-  void confirmDeleteGroup(String id) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Delete Classroom'),
-        content: const Text('Delete this classroom?'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () async {
-              await FirebaseFirestore.instance
-                  .collection('groups')
-                  .doc(id)
-                  .delete();
-              Navigator.pop(context);
-            },
-            child: const Text('Delete'),
-          ),
-        ],
+  void navigateToDirectMessages() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const DirectMessages()),
+    );
+  }
+
+  void openChatroom(String groupId, String groupName) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ChatroomPage(
+          groupId: groupId,
+          chatroomId: groupId,
+          chatroomName: groupName,
+        ),
       ),
     );
   }
 
   @override
-  Widget build(BuildContext context) {
-    final currentUid = FirebaseAuth.instance.currentUser?.uid;
+  void dispose() {
+    _debounce?.cancel();
+    searchController.dispose();
+    super.dispose();
+  }
 
+  @override
+  Widget build(BuildContext context) {
     return MaterialApp(
       theme: isDarkMode ? ThemeData.dark() : ThemeData.light(),
-      debugShowCheckedModeBanner: false,
-      routes: {
-        '/inbox': (_) => const DirectMessages(),
-      },
       home: Scaffold(
         appBar: GlobalAppBar(
-          title: 'Your Classrooms',
-          showSearch: true,
-          showInbox: true,
-          onAddGroup: showCreateGroupDialog,
-          onSearch: () {
-            Navigator.pushNamed(context, '/search');
-          },
-          onToggleTheme: () => context.read<ThemeService>().toggleTheme(),
-          onProfile: goToProfileScreen,
+          title: '',
+          showInbox: false,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.message),
+              tooltip: 'Direct Messages',
+              onPressed: navigateToDirectMessages,
+            ),
+            IconButton(
+              icon: const Icon(Icons.add),
+              tooltip: 'Create Group',
+              onPressed: () => navigateToCreateGroup(),
+            ),
+            IconButton(
+              icon: Icon(isDarkMode ? Icons.light_mode : Icons.dark_mode),
+              tooltip: 'Toggle Theme',
+              onPressed: toggleTheme,
+            ),
+          ],
         ),
-
-        body: currentUid == null
-            ? const Center(
-                child: Text('Please log in to view your classrooms.'),
-              )
-            : StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance
-                    .collection('groups')
-                    .where('members', arrayContains: currentUid)
-                    .snapshots(),
+        body: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: TextField(
+                controller: searchController,
+                onChanged: onSearchChanged,
+                decoration: const InputDecoration(
+                  labelText: 'Search Groups',
+                  prefixIcon: Icon(Icons.search),
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ),
+            Expanded(
+              child: StreamBuilder<QuerySnapshot>(
+                stream: getGroups(),
                 builder: (context, snapshot) {
                   if (snapshot.hasError) {
-                    return Center(child: Text('Error: ${snapshot.error}'));
+                    return const Center(child: Text('Something went wrong.'));
                   }
+
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
                   }
 
-                  final docs = snapshot.data!.docs;
-                  if (docs.isEmpty) {
-                    return const Center(
-                        child: Text('You are not enrolled in any classrooms.'));
+                  final groups = snapshot.data!.docs.where((doc) {
+                    final name = (doc['name'] ?? '').toString().toLowerCase();
+                    return name.contains(searchQuery.toLowerCase());
+                  }).toList();
+
+                  if (groups.isEmpty) {
+                    return const Center(child: Text('No groups found.'));
                   }
 
                   return ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: docs.length,
+                    itemCount: groups.length,
                     itemBuilder: (context, index) {
-                      final doc = docs[index];
+                      final doc = groups[index];
                       final data = doc.data() as Map<String, dynamic>;
-                      final name = data['name'] as String? ?? 'Unnamed';
-                      final id = doc.id;
-                      final owner = data['owner'] as String?;
-                      final isOwner = owner == currentUid;
+                      final groupName = data['name'] ?? 'Unnamed Group';
+                      final groupId = doc.id;
 
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: GroupCard(
-                          groupName: name,
-                          groupId: id,
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => ChatroomPage(
-                                groupId: id,
-                                chatroomName: name,
-                              ),
-                            ),
-                          ),
-                          footer: Row(
-                            children: [
-                              Expanded(
-                                child: ElevatedButton(
-                                  onPressed: () async {
-                                    if (isOwner) {
-                                      await FirebaseFirestore.instance
-                                          .collection('groups')
-                                          .doc(id)
-                                          .delete();
-                                    } else {
-                                      await FirebaseFirestore.instance
-                                          .collection('groups')
-                                          .doc(id)
-                                          .update({
-                                        'members': FieldValue.arrayRemove(
-                                            [currentUid])
-                                      });
-                                    }
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                      backgroundColor:
-                                          isOwner ? Colors.red : Colors.orange),
-                                  child:
-                                      Text(isOwner ? 'Delete' : 'Leave'),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              IconButton(
-                                icon: const Icon(Icons.copy),
-                                tooltip: 'Copy ID',
-                                onPressed: () {
-                                  Clipboard.setData(
-                                      ClipboardData(text: id));
-                                  ScaffoldMessenger.of(context)
-                                      .showSnackBar(const SnackBar(
-                                          content:
-                                              Text('Classroom ID copied')));
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
+                      return GroupCard(
+                        groupDoc: doc,
+                        onEnterChatroom: () => openChatroom(groupId, groupName),
+                        onEdit: (groupDoc) => navigateToCreateGroup(existingGroup: groupDoc),
                       );
                     },
                   );
                 },
               ),
+            ),
+          ],
+        ),
       ),
     );
   }

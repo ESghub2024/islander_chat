@@ -14,36 +14,44 @@ class MyTextBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.grey[400],
-        borderRadius: BorderRadius.circular(10),
-      ),
-      padding: const EdgeInsets.only(left: 15, bottom: 15),
-      margin: const EdgeInsets.only(left: 20, right: 20, top: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              //section name
-              Text(
-                sectionName,
-                style: TextStyle(color: Colors.grey[700], fontSize: 16),
-              ),
-
-              //edit details button
-              IconButton(
-                onPressed: onPressed,
-                icon: Icon(Icons.settings, color: Colors.grey[700]),
-              ),
-            ],
-          ),
-
-          //text
-          Text(text, style: const TextStyle(color: Colors.black, fontSize: 18)),
-        ],
+    return InkWell(
+      onTap: onPressed,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.grey.shade300,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  sectionName,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey[700],
+                      ),
+                ),
+                IconButton(
+                  icon: Icon(Icons.edit, color: Colors.grey[700]),
+                  onPressed: onPressed,
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              text,
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: Colors.black87,
+                  ),
+            ),
+          ],
+        ),
       ),
     );
   }

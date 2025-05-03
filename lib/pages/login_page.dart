@@ -16,24 +16,39 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
+  bool isLoading = false;
 
-  Future<void> signIn() async {
+  void signIn() async {
+    final email = emailController.text.trim();
+    final password = passwordController.text;
+
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please fill in all fields")),
+      );
+      return;
+    }
+
     final authService = Provider.of<AuthService>(context, listen: false);
 
+    setState(() => isLoading = true);
+
     try {
-      await authService.signInWithEmailandPassword(
-        emailController.text.trim(),
-        passwordController.text,
-      );
-      // On successful login, navigate to main page
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, '/main');
-      }
+      await authService.signInWithEmailandPassword(email, password);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.toString())),
       );
+    } finally {
+      if (mounted) setState(() => isLoading = false);
     }
+  }
+
+  @override
+  void dispose() {
+    emailController.dispose();
+    passwordController.dispose();
+    super.dispose();
   }
 
   @override
@@ -43,49 +58,56 @@ class _LoginPageState extends State<LoginPage> {
       body: Center(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 50.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Image.asset('images/Islander.png', scale: 1.5),
-              const SizedBox(height: 20.0),
-              const Text(
-                "Welcome to the Islander Chat Application!",
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 20.0),
-              MyTextField(
-                controller: emailController,
-                hintText: "Student Email",
-                obscureText: false,
-              ),
-              const SizedBox(height: 20.0),
-              MyTextField(
-                controller: passwordController,
-                hintText: "Password",
-                obscureText: true,
-              ),
-              const SizedBox(height: 20.0),
-              MyButtons(onTap: signIn, text: "Login"),
-              const SizedBox(height: 20.0),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text('New user?'),
-                  const SizedBox(width: 4),
-                  GestureDetector(
-                    onTap: widget.onTap,
-                    child: const Text(
-                      'Register Here.',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        decoration: TextDecoration.underline,
-                        color: Colors.blue,
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                const SizedBox(height: 40.0),
+                Image.asset('images/Islander.png', scale: 1.5),
+                const Text(
+                  "Welcome to the Islander Chat Application!",
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 20.0),
+
+                MyTextField(
+                  controller: emailController,
+                  hintText: "Student Email",
+                  obscureText: false,
+                ),
+                const SizedBox(height: 20.0),
+
+                MyTextField(
+                  controller: passwordController,
+                  hintText: "Password",
+                  obscureText: true,
+                ),
+                const SizedBox(height: 20.0),
+
+                isLoading
+                    ? const CircularProgressIndicator()
+                    : MyButtons(onTap: signIn, text: "Login"),
+                const SizedBox(height: 20.0),
+
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text('New user?'),
+                    const SizedBox(width: 4),
+                    GestureDetector(
+                      onTap: widget.onTap,
+                      child: const Text(
+                        'Register Here.',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          decoration: TextDecoration.underline,
+                          color: Colors.blue,
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),

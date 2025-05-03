@@ -1,134 +1,84 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:provider/provider.dart';
-import 'package:timeago/timeago.dart' as timeago;
-import '../services/notification_service.dart';
+import 'package:islander_chat/pages/profile_page.dart';
 
 class GlobalAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
-  final bool showInbox;
-  final bool showSearch;
   final VoidCallback? onAddGroup;
-  final VoidCallback? onSearch;
-  final VoidCallback? onToggleTheme;
-  final VoidCallback? onProfile;
+  final bool showLogout;
+  final bool showProfile;
+  final List<Widget> actions;
 
   const GlobalAppBar({
-    Key? key,
+    super.key,
     required this.title,
-    this.showInbox = true,
-    this.showSearch = false,
     this.onAddGroup,
-    this.onSearch,
-    this.onToggleTheme,
-    this.onProfile,
-  }) : super(key: key);
+    this.showLogout = true,
+    this.showProfile = true,
+    required this.actions, required bool showInbox,
+  });
 
-  Future<void> _logout(BuildContext context) async {
+  Future<void> logout(BuildContext context) async {
     await FirebaseAuth.instance.signOut();
-    // wipe the back stack and go to login
-    Navigator.of(context,rootNavigator: true).pushNamedAndRemoveUntil('/login', (_) => false);
+    if (context.mounted) {
+      Navigator.pushReplacementNamed(context, '/login');
+    }
+  }
+
+  List<Widget> _buildActions(BuildContext context) {
+    final builtActions = <Widget>[];
+
+    if (onAddGroup != null) {
+      builtActions.add(
+        IconButton(
+          icon: const Icon(Icons.group_add),
+          tooltip: 'Create Group',
+          onPressed: onAddGroup,
+        ),
+      );
+    }
+
+    if (showProfile) {
+      builtActions.add(
+        IconButton(
+          icon: const Icon(Icons.person),
+          tooltip: 'Profile',
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ProfileScreen()),
+            );
+          },
+        ),
+      );
+    }
+
+    if (showLogout) {
+      builtActions.add(
+        IconButton(
+          icon: const Icon(Icons.logout),
+          tooltip: 'Logout',
+          onPressed: () => logout(context),
+        ),
+      );
+    }
+
+    builtActions.addAll(actions);
+    return builtActions;
   }
 
   @override
   Widget build(BuildContext context) {
-    final notifSvc = context.watch<NotificationService>();
-
     return AppBar(
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-      actions: [
-        if (onAddGroup != null)
-          IconButton(
-            icon: const Icon(Icons.group_add),
-            tooltip: 'Create Group',
-            onPressed: onAddGroup,
-          ),
-
-        if (showSearch)
-          IconButton(
-            icon: const Icon(Icons.search),
-            tooltip: 'Search',
-            onPressed: onSearch ?? () => Navigator.pushNamed(context, '/search'),
-          ),
-
-        if (showInbox)
-          IconButton(
-            icon: const Icon(Icons.mail_outline),
-            tooltip: 'Direct Messages',
-            onPressed: () => Navigator.pushNamed(context, '/inbox'),
-          ),
-
-        // Bell + badge
-        Stack(alignment: Alignment.topRight, children: [
-          IconButton(
-            icon: const Icon(Icons.notifications_none),
-            tooltip: 'Notifications',
-            onPressed: () => _showNotificationsSheet(context),
-          ),
-          if (notifSvc.unreadCount > 0)
-            Positioned(
-              right: 11,
-              top: 11,
-              child: Container(
-                padding: const EdgeInsets.all(2),
-                decoration: BoxDecoration(
-                  color: Colors.red,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                constraints: const BoxConstraints(minWidth: 14, minHeight: 14),
-                child: Text(
-                  '${notifSvc.unreadCount}',
-                  style: const TextStyle(color: Colors.white, fontSize: 8),
-                  textAlign: TextAlign.center,
-                ),
-              ),
+      title: Text(
+        title,
+        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: Theme.of(context).appBarTheme.foregroundColor ?? Colors.white,
+              fontWeight: FontWeight.bold,
             ),
-        ]),
-
-        // Theme toggle
-        IconButton(
-          icon: const Icon(Icons.brightness_6),
-          tooltip: 'Toggle Theme',
-          onPressed: onToggleTheme ?? () {},
-        ),
-
-        // Profile
-        IconButton(
-          icon: const Icon(Icons.person),
-          tooltip: 'Profile',
-          onPressed: onProfile ?? () => Navigator.pushNamed(context, '/profile'),
-        ),
-
-        // Logout
-        IconButton(
-          icon: const Icon(Icons.logout),
-          tooltip: 'Logout',
-          onPressed: () => _logout(context),
-        ),
-      ],
-    );
-  }
-
-  void _showNotificationsSheet(BuildContext context) {
-    final notifs = context.read<NotificationService>().items;
-    showModalBottomSheet(
-      context: context,
-      builder: (_) => ListView.separated(
-        padding: const EdgeInsets.all(8),
-        itemCount: notifs.length,
-        separatorBuilder: (_, __) => const Divider(),
-        itemBuilder: (c, i) {
-          final n = notifs[i];
-          return ListTile(
-            title: Text(n.title),
-            subtitle: Text(n.subtitle),
-            trailing: Text(timeago.format(n.timestamp)),
-            onTap: () {
-              // TODO: deep-link into the classroom / DM
-            },
-          );
-        },
       ),
+      backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+      actions: _buildActions(context),
     );
   }
 

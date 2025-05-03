@@ -1,61 +1,100 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
-import 'package:islander_chat/model/message.dart';
 
-class ChatService extends ChangeNotifier {
-  //Get instances of Auth and Firestore
-  final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
-  final FirebaseFirestore _fireStore = FirebaseFirestore.instance;
+class ChatService {
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  //Send message
-  Future<void> sendMessage(String receiverId, String message, {required bool isImage}) async {
-    //Get current user info
-    final String currentUserId = _firebaseAuth.currentUser!.uid;
-    final String currentUserEmail = _firebaseAuth.currentUser!.email.toString();
-    final Timestamp timestamp = Timestamp.now();
+  /// Creates or fetches a conversation ID for a direct message.
+  Future<String> getOrCreateDirectConversationId(String otherUserId) async {
+    final currentUser = _auth.currentUser;
+    if (currentUser == null || otherUserId.isEmpty) {
+      throw Exception("Invalid users for conversation.");
+    }
 
-  //Create a new message
-  Message newMessage = Message(
-    senderID: currentUserId, 
-    senderEmail: currentUserEmail, 
-    receiverId: receiverId, 
-    message: message, 
-    timestamp: timestamp,
-    );
-  
-  //Construct chat room id from current user id and receiver id
-  List<String> ids = [currentUserId, receiverId];
-  ids.sort();
-  String chatRoomId = ids.join("_");
+    final ids = [currentUser.uid, otherUserId]..sort();
+    final conversationId = ids.join("_");
 
-  //Add new message to database
-  await _fireStore
-      .collection('chat_rooms')
-      .doc(chatRoomId)
-      .collection('messages')
-      .add(newMessage.toMap());
+    final docRef = _firestore.collection('direct_messages').doc(conversationId);
+    final doc = await docRef.get();
+
+    if (!doc.exists) {
+      await docRef.set({
+        'participants': ids,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      print("Created conversation: $conversationId with participants $ids");
+    } else {
+      print("Existing conversation: $conversationId");
+    }
+
+    return conversationId;
   }
 
-  //Receive message
-  Stream<QuerySnapshot> getMessages(String userId, String otherUserId){
-    List<String> ids = [userId, otherUserId];
-    ids.sort();
-    String chatRoomId = ids.join("_");
+  /// Sends a message (text or image) to another user.
+  Future<void> sendDirectMessage(String receiverId, String message, {bool isImage = false}) async {
+    final currentUser = _auth.currentUser;
+    if (currentUser == null || message.trim().isEmpty || receiverId.isEmpty) return;
 
-    return _fireStore
-    .collection('chat_rooms')
-    .doc(chatRoomId)
-    .collection('messages')
-    .orderBy('timestamp' , descending: false)
-    .snapshots();
+    final conversationId = await getOrCreateDirectConversationId(receiverId);
+
+    await _firestore
+        .collection('direct_messages')
+        .doc(conversationId)
+        .collection('messages')
+        .add({
+      'senderID': currentUser.uid,
+      'senderEmail': currentUser.email ?? '',
+      'receiverId': receiverId,
+      'message': message.trim(),
+      'timestamp': Timestamp.now(),
+      'isImage': isImage,
+    });
+
+    print("Sent ${isImage ? 'image' : 'text'} message to $receiverId");
   }
 
-  sendImage(String receiverUserID, String path) {}
+  /// Streams messages between the current user and another user.
+  Stream<QuerySnapshot> getDirectMessages(String userId, String otherUserId) {
+    final ids = [userId, otherUserId]..sort();
+    final conversationId = ids.join("_");
 
-  getImageUploadProgress() {}
+    return _firestore
+        .collection('direct_messages')
+        .doc(conversationId)
+        .collection('messages')
+        .orderBy('timestamp', descending: true)
+        .snapshots();
+  }
 
-  uploadImage(String path) {}
-  
+  /// Sends a message in a group chatroom.
+  Future<void> sendGroupMessage(String groupId, String chatroomId, String message) async {
+    final currentUser = _auth.currentUser;
+    if (currentUser == null || message.trim().isEmpty) return;
+
+    await _firestore
+        .collection('groups')
+        .doc(groupId)
+        .collection('chatrooms')
+        .doc(chatroomId)
+        .collection('messages')
+        .add({
+      'senderId': currentUser.uid,
+      'senderEmail': currentUser.email ?? '',
+      'text': message.trim(),
+      'timestamp': Timestamp.now(),
+    });
+  }
+
+  /// Streams messages from a group chatroom.
+  Stream<QuerySnapshot> getGroupMessages(String groupId, String chatroomId) {
+    return _firestore
+        .collection('groups')
+        .doc(groupId)
+        .collection('chatrooms')
+        .doc(chatroomId)
+        .collection('messages')
+        .orderBy('timestamp', descending: true)
+        .snapshots();
+  }
 }
-
